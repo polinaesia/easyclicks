@@ -53,7 +53,7 @@ except ImportError:
 
 MIN_DISTANCE_PX = 10
 DEFAULT_ZOOM    = 1.5
-MARKER_RADIUS   = 15      # doubled from original 10
+MARKER_RADIUS   = 10     # doubled from original 10
 MARKER_ALPHA    = int(0.6 * 255)  # 153
 
 # ── Main Application ──────────────────────────────────────────────────────────
@@ -543,9 +543,14 @@ class PDFClickCounter:
     _PT_TO_M = 0.0254 / 72
 
     def apply_scale_ratio(self):
-        raw = self.scale_ratio_var.get().strip().lstrip("1:").lstrip(":")
+        raw = self.scale_ratio_var.get().strip()
+        # Accept "200", "1:200", "1/200" — take the part after the separator
+        for sep in (":", "/"):
+            if sep in raw:
+                raw = raw.split(sep)[-1].strip()
+                break
         try:
-            n = float(raw)
+            n = float(raw.replace(",", "."))
             if n <= 0:
                 raise ValueError
         except ValueError:
