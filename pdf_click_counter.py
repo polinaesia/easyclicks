@@ -51,7 +51,7 @@ except ImportError:
 
 # ── Configuration ────────────────────────────────────────────────────────────
 
-MIN_DISTANCE_PX = 15
+MIN_DISTANCE_PX = 10
 DEFAULT_ZOOM    = 1.5
 MARKER_RADIUS   = 15      # doubled from original 10
 MARKER_ALPHA    = int(0.6 * 255)  # 153
@@ -97,10 +97,10 @@ class PDFClickCounter:
     # ── UI Construction ───────────────────────────────────────────────────────
 
     def _build_ui(self):
-        btn_cfg = dict(bg="#313244", fg="#313244", activebackground="#45475a",
-                       activeforeground="#cdd6f4", relief=tk.FLAT,
+        btn_cfg = dict(bg="#313244", fg="#cdd6f4", activebackground="#45475a",
+                       activeforeground="#2569F2", relief=tk.FLAT,
                        padx=8, pady=4, cursor="hand2", font=("Courier", 10))
-
+ 
         # ── Wrapper holds the main bar + the collapsible ruler bar ───────────
         # Keeping both inside one wrapper means pack_forget/pack on ruler_bar
         # never disturbs the canvas position below.
