@@ -97,14 +97,14 @@ class PDFClickCounter:
     # ── UI Construction ───────────────────────────────────────────────────────
 
     def _build_ui(self):
-        btn_cfg = dict(bg="#313244", fg="#cdd6f4", activebackground="#45475a",
+        btn_cfg = dict(bg="#313244", fg="#a6adc8", activebackground="#45475a",
                        activeforeground="#2569F2", relief=tk.FLAT,
                        padx=8, pady=4, cursor="hand2", font=("Courier", 10))
  
         # ── Wrapper holds the main bar + the collapsible ruler bar ───────────
         # Keeping both inside one wrapper means pack_forget/pack on ruler_bar
         # never disturbs the canvas position below.
-        tools_wrapper = tk.Frame(self.root, bg="#1e1e2e")
+        tools_wrapper = tk.Frame(self.root, bg="#181825")
         tools_wrapper.pack(side=tk.TOP, fill=tk.X)
 
         # ── Single combined toolbar ──────────────────────────────────────────
@@ -116,15 +116,15 @@ class PDFClickCounter:
         nav_frame.pack(side=tk.RIGHT, padx=4)
         tk.Button(nav_frame, text="◀", command=self.prev_page, **btn_cfg).pack(side=tk.LEFT, padx=2)
         self.page_label = tk.Label(nav_frame, text="—", bg="#181825",
-                                   fg="#cdd6f4", font=("Courier", 10), width=12)
+                                   fg="#313244", font=("Courier", 10), width=12)
         self.page_label.pack(side=tk.LEFT, padx=4)
         tk.Button(nav_frame, text="▶", command=self.next_page, **btn_cfg).pack(side=tk.LEFT, padx=2)
 
         # Hamburger menu (Open / Export)
         self._menu_btn = tk.Button(toolbar, text="☰", command=self._show_file_menu, **btn_cfg)
         self._menu_btn.pack(side=tk.LEFT, padx=2)
-        self._file_menu = tk.Menu(self.root, tearoff=0, bg="#313244", fg="#cdd6f4",
-                                  activebackground="#45475a", activeforeground="#cdd6f4",
+        self._file_menu = tk.Menu(self.root, tearoff=0, bg="#313244", fg="#a6adc8",
+                                  activebackground="#45475a", activeforeground="#a6adc8",
                                   font=("Courier", 10))
         self._file_menu.add_command(label="📂  Open PDF",       command=self.open_pdf)
         self._file_menu.add_command(label="💾  Export Summary", command=self.export_summary)
@@ -171,11 +171,11 @@ class PDFClickCounter:
         self._refresh_category_menu()
 
         # ── Ruler toolbar (collapsible – hidden until ruler mode is on) ──────
-        self.ruler_bar = tk.Frame(tools_wrapper, bg="#12122a", pady=5, padx=8)
+        self.ruler_bar = tk.Frame(tools_wrapper, bg="#181825", pady=5, padx=8)
         # Not packed here – toggle_ruler_mode shows/hides it inside tools_wrapper
 
-        rbtn = dict(bg="#1e1e3e", fg="#45475a", activebackground="#313244",
-                    activeforeground="#cdd6f4", relief=tk.FLAT,
+        rbtn = dict(bg="#313244", fg="#a6adc8", activebackground="#45475a",
+                    activeforeground="#2569F2", relief=tk.FLAT,
                     padx=8, pady=3, cursor="hand2", font=("Courier", 10))
 
         tk.Button(self.ruler_bar, text="⚖ Set Scale", command=self.set_scale,    **rbtn).pack(side=tk.LEFT, padx=4)
@@ -187,19 +187,19 @@ class PDFClickCounter:
                  fg="#a6adc8", font=("Courier", 10)).pack(side=tk.LEFT)
         self.scale_ratio_var = tk.StringVar()
         ratio_entry = tk.Entry(self.ruler_bar, textvariable=self.scale_ratio_var,
-                               width=7, bg="#313244", fg="#cdd6f4",
-                               insertbackground="#cdd6f4", relief=tk.FLAT,
+                               width=7, bg="#313244", fg="#a6adc8",
+                               insertbackground="#a6adc8", relief=tk.FLAT,
                                font=("Courier", 10))
         ratio_entry.pack(side=tk.LEFT, padx=(2, 2))
         ratio_entry.bind("<Return>", lambda _: self.apply_scale_ratio())
         tk.Button(self.ruler_bar, text="Apply", command=self.apply_scale_ratio, **rbtn).pack(side=tk.LEFT, padx=(2, 10))
 
         self.scale_label = tk.Label(self.ruler_bar, text="Scale: not set",
-                                    bg="#12122a", fg="#a6adc8", font=("Courier", 10))
+                                    bg="#181825", fg="#a6adc8", font=("Courier", 10))
         self.scale_label.pack(side=tk.LEFT, padx=(0, 10))
 
         self.ruler_dist_label = tk.Label(self.ruler_bar, text="",
-                                         bg="#12122a", fg="#EAF6AD",
+                                         bg="#181825", fg="#2569F2",
                                          font=("Courier", 11, "bold"))
         self.ruler_dist_label.pack(side=tk.LEFT, padx=4)
 
