@@ -10,6 +10,9 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -34,9 +37,31 @@ jobs:
           --name click2count
           click2count.py
 
+      - name: Zip build output
+        shell: pwsh
+        run: Compress-Archive -Path dist/click2count/* -DestinationPath click2count-windows.zip
+
       - name: Upload EXE artifact
         uses: actions/upload-artifact@v4
         with:
           name: click2count-windows
           path: dist/click2count/
           retention-days: 30
+
+      - name: Publish GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: click2count-windows.zip
+          tag: latest
+          name: Latest Build
+          body: |
+            ## How to install
+
+            1. Download **click2count-windows.zip** below
+            2. Unzip it anywhere (e.g. your Desktop)
+            3. Open the `click2count` folder and double-click **click2count.exe**
+
+            No Python required.
+          allowUpdates: true
+          removeArtifacts: true
+          makeLatest: true
