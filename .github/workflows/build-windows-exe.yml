@@ -7,6 +7,9 @@ on:
       - 'click2count.py'
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: windows-latest
@@ -25,7 +28,7 @@ jobs:
       - name: Build EXE
         run: >
           pyinstaller
-          --onefile
+          --onedir
           --windowed
           --collect-all pymupdf
           --name click2count
@@ -35,5 +38,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: click2count-windows
-          path: dist/click2count.exe
+          path: dist/click2count/
           retention-days: 30
