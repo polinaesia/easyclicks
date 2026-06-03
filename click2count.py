@@ -84,6 +84,8 @@ class PDFClickCounter:
         # Must keep PhotoImage references alive or tkinter GC's them
         self._marker_images: list = []
 
+        self._pan_key_held: bool = False
+
         # Ruler state
         self.ruler_mode: bool = False
         # 0–2 points in PDF page coords; third click starts a fresh measurement
@@ -127,7 +129,11 @@ class PDFClickCounter:
                                   activebackground="#45475a", activeforeground="#a6adc8",
                                   font=("Courier", 10))
         self._file_menu.add_command(label="📂  Open PDF",       command=self.open_pdf)
-        self._file_menu.add_command(label="💾  Export Summary", command=self.export_summary)
+        self._file_menu.add_separator()
+        self._file_menu.add_command(label="💾  Save Session",   command=self.save_session)
+        self._file_menu.add_command(label="📂  Load Session",   command=self.load_session)
+        self._file_menu.add_separator()
+        self._file_menu.add_command(label="📊  Export Summary", command=self.export_summary)
 
         # Edit actions
         tk.Button(toolbar, text="↩ Undo",  command=self.undo_click, **btn_cfg).pack(side=tk.LEFT, padx=2)
@@ -233,7 +239,11 @@ class PDFClickCounter:
 
         self.canvas.configure(yscrollcommand=v_scroll.set, xscrollcommand=h_scroll.set)
         self.canvas.bind("<Button-1>",           self.on_canvas_click)
+        self.canvas.bind("<B1-Motion>",          self._on_b1_motion)
+        self.canvas.bind("<Button-2>",           self._pan_start)
+        self.canvas.bind("<B2-Motion>",          self._pan_move)
         self.canvas.bind("<MouseWheel>",         self._on_mousewheel)
+        self.canvas.bind("<Shift-MouseWheel>",   self._on_hscroll)
         self.canvas.bind("<Button-4>",           self._on_mousewheel)
         self.canvas.bind("<Button-5>",           self._on_mousewheel)
         self.canvas.bind("<Control-MouseWheel>", self._on_zoom_scroll)
@@ -241,11 +251,13 @@ class PDFClickCounter:
         self.canvas.bind("<Control-Button-5>",   self._on_zoom_scroll)
 
     def _bind_keys(self):
-        self.root.bind("<Left>",  lambda e: self.prev_page())
-        self.root.bind("<Right>", lambda e: self.next_page())
-        self.root.bind("<z>",     lambda e: self.undo_click())
-        self.root.bind("<plus>",  lambda e: self.zoom_in())
-        self.root.bind("<minus>", lambda e: self.zoom_out())
+        self.root.bind("<Left>",       lambda _: self.prev_page())
+        self.root.bind("<Right>",      lambda _: self.next_page())
+        self.root.bind("<z>",          lambda _: self.undo_click())
+        self.root.bind("<plus>",       lambda _: self.zoom_in())
+        self.root.bind("<minus>",      lambda _: self.zoom_out())
+        self.root.bind("<KeyPress-d>",   lambda _: self._set_pan_key(True))
+        self.root.bind("<KeyRelease-d>", lambda _: self._set_pan_key(False))
 
     def _show_file_menu(self):
         btn = self._menu_btn
@@ -418,6 +430,10 @@ class PDFClickCounter:
         if self.pdf_doc is None:
             return
 
+        if self._pan_key_held:
+            self.canvas.scan_mark(event.x, event.y)
+            return
+
         cx = self.canvas.canvasx(event.x)
         cy = self.canvas.canvasy(event.y)
 
@@ -515,11 +531,33 @@ class PDFClickCounter:
         else:
             self.canvas.yview_scroll(1, "units")
 
+    def _on_hscroll(self, event):
+        if event.delta > 0:
+            self.canvas.xview_scroll(-1, "units")
+        else:
+            self.canvas.xview_scroll(1, "units")
+
     def _on_zoom_scroll(self, event):
         if event.num == 4 or event.delta > 0:
             self.zoom_in()
         else:
             self.zoom_out()
+
+    # ── Pan (middle-click drag  or  D + left-click drag) ──────────────────────
+
+    def _set_pan_key(self, held: bool):
+        self._pan_key_held = held
+        self.canvas.config(cursor="fleur" if held else "crosshair")
+
+    def _pan_start(self, event):
+        self.canvas.scan_mark(event.x, event.y)
+
+    def _pan_move(self, event):
+        self.canvas.scan_dragto(event.x, event.y, gain=1)
+
+    def _on_b1_motion(self, event):
+        if self._pan_key_held:
+            self.canvas.scan_dragto(event.x, event.y, gain=1)
 
     # ── Ruler ─────────────────────────────────────────────────────────────────
 
@@ -781,6 +819,91 @@ class PDFClickCounter:
             ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = 10
 
         wb.save(path)
+
+    # ── Session save / load ───────────────────────────────────────────────────
+
+    def save_session(self):
+        save_path = filedialog.asksaveasfilename(
+            defaultextension=".c2c",
+            filetypes=[("Click2Count session", "*.c2c"), ("All files", "*.*")],
+            title="Save Session",
+            initialfile=os.path.splitext(os.path.basename(self.pdf_path))[0] if self.pdf_path else "session",
+        )
+        if not save_path:
+            return
+
+        data = {
+            "version":       1,
+            "pdf_path":      self.pdf_path,
+            "current_page":  self.current_page,
+            "zoom":          self.zoom,
+            "scale_m_per_pt": self.scale_m_per_pt,
+            "categories":    self.categories,
+            "clicks": {
+                str(cat_idx): {
+                    str(pg): coords
+                    for pg, coords in pages.items()
+                }
+                for cat_idx, pages in self.clicks.items()
+            },
+        }
+        with open(save_path, "w") as f:
+            json.dump(data, f, indent=2)
+        messagebox.showinfo("Session Saved", f"Session saved to:\n{save_path}")
+
+    def load_session(self):
+        load_path = filedialog.askopenfilename(
+            filetypes=[("Click2Count session", "*.c2c"), ("All files", "*.*")],
+            title="Load Session",
+        )
+        if not load_path:
+            return
+
+        try:
+            with open(load_path) as f:
+                data = json.load(f)
+        except Exception as exc:
+            messagebox.showerror("Error", f"Could not read session file:\n{exc}")
+            return
+
+        pdf_path = data.get("pdf_path", "")
+        if pdf_path and not os.path.isfile(pdf_path):
+            messagebox.showerror(
+                "PDF not found",
+                f"The session references a PDF that cannot be found:\n{pdf_path}\n\n"
+                "Move the PDF back to its original location and try again.",
+            )
+            return
+
+        try:
+            self.pdf_doc = fitz.open(pdf_path) if pdf_path else None
+        except Exception as exc:
+            messagebox.showerror("Error", f"Could not open PDF:\n{exc}")
+            return
+
+        self.pdf_path      = pdf_path
+        self.current_page  = data.get("current_page", 0)
+        self.zoom          = data.get("zoom", DEFAULT_ZOOM)
+        self.scale_m_per_pt = data.get("scale_m_per_pt")
+        self.categories    = data.get("categories", [{"name": "Category 1", "color": "#e63946"}])
+
+        raw_clicks = data.get("clicks", {})
+        self.clicks = {
+            int(cat_idx): {int(pg): [tuple(xy) for xy in coords] for pg, coords in pages.items()}
+            for cat_idx, pages in raw_clicks.items()
+        }
+
+        self.current_category = 0
+        self._refresh_category_menu()
+
+        if self.scale_m_per_pt is not None:
+            ratio = self.scale_m_per_pt / self._PT_TO_M
+            self.scale_label.config(text=f"Scale  1:{ratio:.0f}")
+            self.scale_ratio_var.set(f"{ratio:.0f}")
+
+        if self.pdf_doc:
+            self.root.title(f"PDF Click Counter — {os.path.basename(pdf_path)}")
+            self.render_page()
 
 
 # ── Entry Point ───────────────────────────────────────────────────────────────
