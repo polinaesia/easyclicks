@@ -68,7 +68,7 @@ Switch the active category from the dropdown — new clicks go to the selected c
 
 | Tool | How to activate |
 |------|----------------|
-| **✏** | Click the Marker button — left-click places markers |
+| **🔢** | Click the Marker button — left-click places markers |
 | **✋** | Click the Pan button, or hold `D` + drag (temporary), or middle-click drag |
 | **📏** | Click the Ruler button — a second toolbar row appears |
 | Exit any tool | **Right-click** |
@@ -117,7 +117,7 @@ Click **☰ → Export Summary** and choose a format:
 
 ## Credits
 
-Built by Polina February & Claude (Anthropic)
+Built by Polina February
 Concept & feedback by HDZ Electrical
 
 © HDZ Electrical. All rights reserved.
