@@ -2,7 +2,7 @@
 
 A lightweight desktop tool for counting and categorising items on PDF building plans — or any PDF document. Built with Python and tkinter.
 
-Developed by **Polina February** & **Claude** (Anthropic)
+Developed by **Polina February**
 Concept & feedback by **HDZ Electrical**
 
 ---
