@@ -27,6 +27,7 @@ from tkinter import filedialog, messagebox, colorchooser, simpledialog, ttk
 import math
 import json
 import os
+import webbrowser
 
 try:
     import fitz  # PyMuPDF
@@ -51,6 +52,8 @@ except ImportError:
 
 # ── Configuration ────────────────────────────────────────────────────────────
 
+KOFI_URL        = "https://ko-fi.com/polinafebruary"
+PREFS_PATH      = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".click2count_prefs.json")
 MIN_DISTANCE_PX = 10
 DEFAULT_ZOOM    = 1.5
 MARKER_RADIUS   = 10     # doubled from original 10
@@ -96,6 +99,7 @@ class PDFClickCounter:
 
         self._build_ui()
         self._bind_keys()
+        self.root.protocol("WM_DELETE_WINDOW", self._on_closing)
 
     # ── UI Construction ───────────────────────────────────────────────────────
 
@@ -157,7 +161,7 @@ class PDFClickCounter:
         # Ruler toggle icon (expands ruler bar below when active)
         self.ruler_btn = tk.Button(toolbar, text="📏", command=self.toggle_ruler_mode, **btn_cfg)
         self.ruler_btn.pack(side=tk.LEFT, padx=2)
-        self.marker_btn = tk.Button(toolbar, text="✏", command=self.activate_marker_mode, **btn_cfg)
+        self.marker_btn = tk.Button(toolbar, text="🔢", command=self.activate_marker_mode, **btn_cfg)
         self.marker_btn.pack(side=tk.LEFT, padx=2)
 
         tk.Frame(toolbar, bg="#45475a", width=1).pack(side=tk.LEFT, fill=tk.Y, padx=8, pady=3)
@@ -234,18 +238,22 @@ class PDFClickCounter:
         tk.Label(status_bar, text="·", bg="#11111b", fg="#45475a",
                  font=("Courier", 10)).pack(side=tk.LEFT, padx=4)
 
+        self.cat_page_var = tk.StringVar(value="Page: 0")
+        tk.Label(status_bar, textvariable=self.cat_page_var,
+                 bg="#11111b", fg="#a6adc8",
+                 font=("Courier", 10)).pack(side=tk.LEFT)
+        
+        tk.Label(status_bar, text="·", bg="#11111b", fg="#45475a",
+                 font=("Courier", 10)).pack(side=tk.LEFT, padx=4)
+
         self.cat_total_var = tk.StringVar(value="Cat: 0")
         tk.Label(status_bar, textvariable=self.cat_total_var,
                  bg="#11111b", fg="#a6adc8",
                  font=("Courier", 10)).pack(side=tk.LEFT)
 
-        tk.Label(status_bar, text="·", bg="#11111b", fg="#45475a",
-                 font=("Courier", 10)).pack(side=tk.LEFT, padx=4)
 
-        self.cat_page_var = tk.StringVar(value="Page: 0")
-        tk.Label(status_bar, textvariable=self.cat_page_var,
-                 bg="#11111b", fg="#a6adc8",
-                 font=("Courier", 10)).pack(side=tk.LEFT)
+
+        
 
         # ── Scrollable canvas ─────────────────────────────────────────────────
         canvas_frame = tk.Frame(self.root, bg="#1e1e2e")
@@ -289,21 +297,50 @@ class PDFClickCounter:
         self._file_menu.tk_popup(btn.winfo_rootx(), btn.winfo_rooty() + btn.winfo_height())
 
     def _show_about(self):
-        messagebox.showinfo(
-            "About Click2Count",
-            "Click2Count\n"
-            "Developed by Polina February & Claude (Anthropic)\n"
-            "Concept & feedback by HDZ Electrical\n"
-            "\n"
-            "A desktop tool for counting items on PDF\n"
-            "building plans and drawings.\n"
-            "\n"
-            "• Click to place numbered markers\n"
-            "• Multiple colour-coded categories\n"
-            "• Zoom and pan freely\n"
-            "• Measure distances with the Ruler\n"
-            "• Save/load sessions, export to Excel\n"
-        )
+        dlg = tk.Toplevel(self.root)
+        dlg.title("About Click2Count")
+        dlg.configure(bg="#1e1e2e")
+        dlg.resizable(False, False)
+        dlg.grab_set()
+
+        self.root.update_idletasks()
+        x = self.root.winfo_rootx() + self.root.winfo_width()  // 2 - 200
+        y = self.root.winfo_rooty() + self.root.winfo_height() // 2 - 150
+        dlg.geometry(f"400x320+{x}+{y}")
+
+        tk.Label(dlg, text="Click2Count", bg="#1e1e2e", fg="#cdd6f4",
+                 font=("Courier", 14, "bold")).pack(pady=(20, 2))
+        tk.Label(dlg, text="Developed by Polina February\nConcept & feedback by HDZ Electrical",
+                 bg="#1e1e2e", fg="#a6adc8", font=("Courier", 9),
+                 justify=tk.CENTER).pack(pady=(0, 12))
+
+        tk.Frame(dlg, bg="#313244", height=1).pack(fill=tk.X, padx=30, pady=(0, 12))
+
+        tk.Label(dlg,
+                 text="• Click to place numbered markers\n"
+                      "• Multiple colour-coded categories\n"
+                      "• Zoom and pan freely\n"
+                      "• Measure distances with the Ruler\n"
+                      "• Save/load sessions, export to Excel",
+                 bg="#1e1e2e", fg="#a6adc8", font=("Courier", 9),
+                 justify=tk.LEFT).pack(padx=30)
+
+        tk.Frame(dlg, bg="#313244", height=1).pack(fill=tk.X, padx=30, pady=(12, 8))
+
+        tk.Label(dlg, text="If this tool saves you time, consider\nbuying Polina a ko-fi ☕",
+                 bg="#1e1e2e", fg="#a6adc8", font=("Courier", 9),
+                 justify=tk.CENTER).pack()
+
+        link = tk.Label(dlg, text="ko-fi.com/polinafebruary",
+                        bg="#1e1e2e", fg="#FF5E5B", font=("Courier", 9, "underline"),
+                        cursor="hand2")
+        link.pack(pady=(2, 12))
+        link.bind("<Button-1>", lambda _: webbrowser.open(KOFI_URL))
+
+        close_btn = tk.Label(dlg, text="Close", bg="#313244", fg="#a6adc8",
+                             font=("Courier", 10), padx=14, pady=5, cursor="hand2")
+        close_btn.place(relx=1.0, rely=1.0, anchor=tk.SE, x=-16, y=-12)
+        close_btn.bind("<Button-1>", lambda _: dlg.destroy())
 
     # ── Category management ───────────────────────────────────────────────────
 
@@ -560,12 +597,26 @@ class PDFClickCounter:
     def prev_page(self):
         if self.pdf_doc and self.current_page > 0:
             self.current_page -= 1
+            self._clear_ruler_on_page_change()
             self.render_page()
 
     def next_page(self):
         if self.pdf_doc and self.current_page < len(self.pdf_doc) - 1:
             self.current_page += 1
+            self._clear_ruler_on_page_change()
             self.render_page()
+
+    def _clear_ruler_on_page_change(self):
+        if self.ruler_mode:
+            self.ruler_mode = False
+            self.ruler_bar.pack_forget()
+        if self.ruler_points:
+            self.ruler_points.clear()
+            self.ruler_dist_label.config(text="")
+        if not self.pan_mode:
+            self.pan_mode = True
+            self.canvas.config(cursor="fleur")
+        self._refresh_tool_buttons()
 
     def zoom_in(self):
         self.zoom = min(self.zoom + 0.25, 5.0)
@@ -664,7 +715,10 @@ class PDFClickCounter:
             self.status_var.set("Ruler mode: click two points to measure distance.")
         else:
             self.ruler_bar.pack_forget()
+            self.ruler_points.clear()
+            self.ruler_dist_label.config(text="")
             self._update_status()
+            self.render_page()
         self._refresh_tool_buttons()
 
     def clear_ruler(self):
@@ -1002,6 +1056,107 @@ class PDFClickCounter:
             self.render_page()
             if not self.pan_mode:
                 self.toggle_pan_mode()
+
+
+    # ── Preferences (persisted to disk) ──────────────────────────────────────
+
+    def _load_prefs(self) -> dict:
+        try:
+            with open(PREFS_PATH) as f:
+                return json.load(f)
+        except Exception:
+            return {}
+
+    def _save_prefs(self, prefs: dict):
+        try:
+            with open(PREFS_PATH, "w") as f:
+                json.dump(prefs, f, indent=2)
+        except Exception:
+            pass
+
+    # ── Exit dialog ───────────────────────────────────────────────────────────
+
+    def _on_closing(self):
+        prefs = self._load_prefs()
+        if prefs.get("skip_kofi_dialog"):
+            self.root.destroy()
+            return
+
+        dlg = tk.Toplevel(self.root)
+        dlg.title("♡")
+        dlg.configure(bg="#1e1e2e")
+        dlg.resizable(False, False)
+        dlg.grab_set()
+
+        # Centre over the main window
+        self.root.update_idletasks()
+        x = self.root.winfo_rootx() + self.root.winfo_width()  // 2 - 220
+        y = self.root.winfo_rooty() + self.root.winfo_height() // 2 - 105
+        dlg.geometry(f"440x210+{x}+{y}")
+
+        tk.Label(
+            dlg,
+            text="Thanks for using Click2Count!",
+            bg="#1e1e2e", fg="#cdd6f4",
+            font=("Courier", 11, "bold"),
+        ).pack(pady=(22, 6))
+
+        tk.Label(
+            dlg,
+            text="If this tool saved you time, consider\nsupporting the developer on Ko-fi ☕",
+            bg="#1e1e2e", fg="#a6adc8",
+            font=("Courier", 11),
+            justify=tk.CENTER,
+        ).pack(pady=(0, 12))
+
+        never_var = tk.BooleanVar(value=False)
+
+        btn_row = tk.Frame(dlg, bg="#1e1e2e")
+        btn_row.pack(pady=(0, 8))
+
+        def _maybe_save_pref():
+            if never_var.get():
+                self._save_prefs({**prefs, "skip_kofi_dialog": True})
+
+        def support_and_exit():
+            _maybe_save_pref()
+            webbrowser.open(KOFI_URL)
+            self.root.destroy()
+
+        def just_exit():
+            _maybe_save_pref()
+            self.root.destroy()
+
+        def _label_btn(parent, text, command, bg, fg, hover_bg, **kw):
+            lbl = tk.Label(parent, text=text, bg=bg, fg=fg,
+                           cursor="hand2", padx=14, pady=6, **kw)
+            lbl.bind("<Button-1>", lambda _: command())
+            lbl.bind("<Enter>",    lambda _: lbl.config(bg=hover_bg))
+            lbl.bind("<Leave>",    lambda _: lbl.config(bg=bg))
+            return lbl
+
+        _label_btn(
+            btn_row, text="Buy me a ☕",
+            command=support_and_exit,
+            bg="#FF5E5B", fg="#ffffff", hover_bg="#e04e4b",
+            font=("Courier", 10, "bold"),
+        ).pack(side=tk.LEFT, padx=8)
+
+        _label_btn(
+            btn_row, text="Exit",
+            command=just_exit,
+            bg="#313244", fg="#a6adc8", hover_bg="#45475a",
+            font=("Courier", 10),
+        ).pack(side=tk.LEFT, padx=8)
+
+        tk.Checkbutton(
+            dlg, text="Never show this again",
+            variable=never_var,
+            bg="#1e1e2e", fg="#585b70",
+            activebackground="#1e1e2e", activeforeground="#a6adc8",
+            selectcolor="#313244",
+            font=("Courier", 9),
+        ).pack(pady=(0, 12))
 
 
 # ── Entry Point ───────────────────────────────────────────────────────────────
