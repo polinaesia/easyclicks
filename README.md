@@ -60,7 +60,7 @@ python click2count.py
 |--------|--------|
 | **＋** | Create a new category (choose name and colour) |
 | **✎ Rename** | Rename the selected category |
-| **🎨** | Change the category colour |
+| **🟥** | Change the category colour |
 
 Switch the active category from the dropdown — new clicks go to the selected category. All category markers are shown on screen simultaneously.
 
